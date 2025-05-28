@@ -4,6 +4,7 @@
 #include <time.h>
 #include "GL\glew.h"
 #include "GL\freeglut.h"
+#include <algorithm>
 
 #include "shaderLoader.h" //narzŕdzie do │adowania i kompilowania shaderˇw z pliku
 
@@ -15,8 +16,19 @@
 #include "glm/gtc/matrix_transform.hpp" // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <iostream>
 
+const float pi = 3.14159265358979323846f;
 
 const int nx=600, nz=600; //wymiary tablicy
+float fpeak = 30.f;
+float dt = 0.002f;
+float ds = 0.02f;
+// et nie jest potrzebne
+
+int xcenter = 450;
+int zcenter = nz-350;
+float vmax = 1000;
+float dtr = ds / (2. * vmax);
+
 
 float tablica[nx][nz] = {};
 
@@ -26,16 +38,16 @@ void init() {
 		for (int j = 0; j < nz; j++)
 		{
 			int a = nz - 1 - j; //odwracamy oś Y, żeby było zgodne z OpenGL
-			if (((i >= 100 && a >=300) && (i < 350 && a < 500) )|| ((i >= 250 && a >=100) && (i < 500 && a < 300))) {
-				tablica[i][a] = -1.f; 
+			if (((i >= 100 && a >=300) && (i < 350 && a < 400) )|| ((i >= 250 && a >=200) && (i < 500 && a < 300))) {
+				tablica[i][a] = 343.f; 
 			}
 			else
 			{
-				tablica[i][a] = 0.f;
+				tablica[i][a] = 1000.f;
 			}
 		}
 	}
-	tablica[500][nz-500] = 1.f; //przykładowa wartość, żeby coś było widać
+
 }
 
 
@@ -49,55 +61,16 @@ int pozycjaMyszyX; // na ekranie
 int pozycjaMyszyY;
 int mbutton; // wcisiety klawisz myszy
 
-double kameraX= 60.0;
-double kameraZ = 30.0;
-double kameraD = -3.0;
-double kameraPredkosc;
-double kameraKat = 20;
-double kameraPredkoscObrotu;
-double poprzednie_kameraX;
-double poprzednie_kameraZ;
-double poprzednie_kameraD;
-
-double rotation = 0;
-
-//macierze
-glm::mat4 MV; //modelview - macierz modelu i świata
-glm::mat4 P;  //projection - macierz projekcji, czyli naszej perspektywy
-
-
-
-float vertices[] = {
-	-1.,-1.,0.,
-	1.,-1.,0.,
-	1.,1.,0.,
-	-1.,1.,0.,
-};
-
-float vertices2[] = {
-	-0.5f, -0.5f, 0.0f,
-	0.5f, -0.5f, 0.0f,
-	0.5f,  0.5f, 0.0f,
-   -0.5f, 0.5f, 0.0f,
-
-
-	//-0.5f, -0.5f, 0.0f,
-	// 0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, -0.5f,
-	 -0.5f, -0.5f, -0.5f,
-};
-
-GLuint elements[] = { 0, 1, 2,3 };
-GLuint elements2[] = { 0, 1, 2,3, 0, 1, 4, 5};
 //shaders
 GLuint programID = 0;
 
-unsigned int VBO,VBO2;
+float p[nx][nz] = {};
+float p_future[nx][nz] = {};
+float p_past[nx][nz] = {};
 unsigned int ebo, ebo2;
-unsigned int VAO[2];
 
 
-/*###############################################################*/
+/*###############################################################*/ 
 void mysz(int button, int state, int x, int y)
 {
 	mbutton = button;
@@ -106,11 +79,6 @@ void mysz(int button, int state, int x, int y)
 	case GLUT_UP:
 		break;
 	case GLUT_DOWN:
-		pozycjaMyszyX = x;
-		pozycjaMyszyY = y;
-		poprzednie_kameraX = kameraX;
-		poprzednie_kameraZ = kameraZ;
-		poprzednie_kameraD = kameraD;
 		break;
 
 	}
@@ -120,12 +88,11 @@ void mysz_ruch(int x, int y)
 {
 	if (mbutton == GLUT_LEFT_BUTTON)
 	{
-		kameraX = poprzednie_kameraX - (pozycjaMyszyX - x) * 0.1;
-		kameraZ = poprzednie_kameraZ - (pozycjaMyszyY - y) * 0.1;
+
 	}
 	if (mbutton == GLUT_RIGHT_BUTTON)
 	{
-		kameraD = poprzednie_kameraD + (pozycjaMyszyY - y) * 0.1;
+	
 	}
 
 }
@@ -164,22 +131,13 @@ void rysuj(void)
 	float sizez = 2./nz;
 	float dx = sizex*0.1;
 	float dz = sizez*0.1;
+	
+	GLuint res_id = glGetUniformLocation(programID, "iResolution");
+	glUniform2f(res_id, screen_width, screen_height);
 
-	std::cout << "screenwidth: " << screen_width << " screenheight: " << screen_height << std::endl;
+	//std::cout << "screenwidth: " << screen_width << " screenheight: " << screen_height << std::endl;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Kasowanie ekranu
-
-	glColor3f(0.0f, 0.0f, 1.0f); // Ustawienie koloru rysowania
-	/*
-	glBegin(GL_QUADS);
-	glColor3f(1., 1., 1.);
-	glVertex2f(-1. , -1. );
-	glVertex2f(-1.+sizex, -1.);
-	glVertex2f(-1.+sizex ,-1.+ sizez);
-	glVertex2f(-1.,-1.+sizez);
-	glEnd();
-	*/
-
 	
 	for (int i = 0; i < nx; i++)
 	{
@@ -187,12 +145,12 @@ void rysuj(void)
 		{
 			float xo = float(float(i) * sizex)-1.;
 			float yo = float(float(j) * sizez)-1.;
+			float z = p[i][j];
 			glBegin(GL_QUADS);
-			glColor3f(tablica[i][j],1.,1.);
-			glVertex3f(xo , yo , tablica[i][j]);
-			glVertex3f(xo , yo + sizez , tablica[i][j]);
-			glVertex3f(xo + sizex , yo + sizez , tablica[i][j]);
-			glVertex3f(xo + sizex , yo, tablica[i][j]);
+			glVertex3f(xo, yo, z );
+			glVertex3f(xo , yo + sizez , z);
+			glVertex3f(xo + sizex , yo + sizez , z);
+			glVertex3f(xo + sizex , yo, z);
 			glEnd();
 		}
 	}
@@ -200,6 +158,8 @@ void rysuj(void)
 
 
 	glutSwapBuffers();
+
+	glFlush();
 	//glUseProgram(programID); //u┐yj programu, czyli naszego shadera	
 
 
@@ -217,7 +177,6 @@ void rysuj(void)
 	glVertexAttrib3f(1, 0.0f, 0.0f, 1.0f);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	
-	glFlush();
 	*/	
 }
 /*###############################################################*/
@@ -228,8 +187,6 @@ void rozmiar(int width, int height)
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, screen_width, screen_height);
-
-	P = glm::perspective(glm::radians(60.0f), (GLfloat)screen_width / (GLfloat)screen_height, 1.0f, 1000.0f);
 
 	glutPostRedisplay(); // Przerysowanie sceny
 }
@@ -245,24 +202,45 @@ void idle()
 GLfloat k = 0.05;
 GLfloat ad = 0.0;
 
+long int t = 0; //licznik czasu
+
+float max = 0.;
+float min = 0.;
+
 void timer(int value) {
+	for (int i = 1;i <(nz - 1);i++) {
+		for (int j =1;j<(nx - 1);j++)
+		{	
+			int a = nz - 1 - j;
+			p_past[i][j] = 2.0 * p[i][j] - p_future[i][j] + ((dtr * dtr) / (ds * ds)) * tablica[i][j] * tablica[i][j] * (p[i][j+1] + p[i][j-1] + p[i+1][j] + p[i - 1][ j] - 4.0 * p[i][j]);
+		}
+	}
 
-	//ad+= k;
-	
-	//if(ad>1 || ad<0)
-	//k=-k;
 
-	//GLfloat attrib[] = { ad, 0.0f,0.0f };
-	// Aktualizacja wartości atrybutu wejściowego 1.
-	//glVertexAttrib3fv(1, attrib);
+	float tf = t*dtr;
+	float exp_result = expf(-(((pi * fpeak * (tf - (1.0f / fpeak))) * (pi * fpeak * (tf - (1.0f / fpeak))))));
+	p_past[xcenter][zcenter] = p_past[xcenter][zcenter] + exp_result * (1.0 - 2.0 * ((pi * fpeak * (tf - (1.0 / fpeak))) * (pi * fpeak * (tf - (1.0 / fpeak)))));
 
-	/*
+
+	GLuint MVP_id = glGetUniformLocation(programID, "iTime"); // pobierz lokalizację zmiennej 'uniform' "MV" w programie
+
+	glUniform1f(MVP_id,float(t));
+
+	for (int i = 0; i < nz;i++)
+	{
+		p_past[i][0] = p[i][0] + p[i][1] - p_future[i][1] + tablica[i][0] * (dtr / ds) * (p[i][1] - p[i][0] - (p_future[i][2] - p_future[i][1]));
+		p_past[i][nz-1] = p[i][nz-1] + p[i][nz - 2] - p_future[i][nz - 2] + tablica[i][nz-1] * (dtr / ds) * (p[i][nz - 2] - p[i][nz-1] - (p_future[i][nz - 3] - p_future[i][ nz - 2]));
+		p_past[0][i] = p[0][i] + p[1][i] - p_future[1][i] + tablica[0][i] * (dtr / ds) * (p[1][i] - p[0][i] - (p_future[2][i] - p_future[1][i]));
+		p_past[nz - 1][i] = p[nx - 1][i] + p[nx - 2][i] - p_future[nx - 2][i] + tablica[nx - 1][i] * (dtr / ds) * (p[nx - 2][i] - p[nx - 1][i] - (p_future[nx - 3][i] - p_future[nx - 2][i]));
+	}
 	
-	//W vertex_shader np:
-	//layout (location = 1) in vec3 incolor;
-	
-	*/
-	glutTimerFunc(20, timer, 0);
+
+	t += 1;
+	std::copy(&p[0][0], &p[0][0]+nz*nx, &p_future[0][0]);
+	std::copy(&p_past[0][0], &p_past[0][0] + nz * nx, &p[0][0]);
+	//std::copy(&myint[0][0], &myint[0][0] + rows * columns, &favint[0][0]);
+	glutTimerFunc(.12, timer, 0);
+    
 }
 /*###############################################################*/
 int main(int argc, char **argv)
@@ -290,33 +268,17 @@ int main(int argc, char **argv)
 
 	glEnable(GL_DEPTH_TEST);
 
-	glGenVertexArrays(2, VAO);
 
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glGenBuffers(1, &VBO2);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-	glGenBuffers(1, &ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-	glGenBuffers(1, &ebo2);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo2);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements2), elements2, GL_STATIC_DRAW);
-
-
-	glBindVertexArray(VAO[0]);
+	
+	/*
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glBindVertexArray(VAO[1]);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO2);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo2);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
+	*/
 
 	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
 
@@ -324,11 +286,7 @@ int main(int argc, char **argv)
 
 	glutMainLoop();					
 	
-	glDeleteBuffers(1,&VBO);
-	glDeleteBuffers(1, &VBO2);
-	glDeleteBuffers(1, &ebo);
-	glDeleteBuffers(1, &ebo2);
-	glDeleteBuffers(2, VAO);
+
 	return(0);
 }
 
