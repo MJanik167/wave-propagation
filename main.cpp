@@ -38,7 +38,7 @@ void init() {
 		for (int j = 0; j < nz; j++)
 		{
 			int a = nz - 1 - j; //odwracamy oś Y, żeby było zgodne z OpenGL
-			if (((i >= 100 && a >=300) && (i < 350 && a < 400) )|| ((i >= 250 && a >=200) && (i < 500 && a < 300))) {
+			if (((i >= 90 && a >=290) && (i < 360 && a < 410) )|| ((i >= 240 && a >=190) && (i < 510 && a < 310))) {
 				tablica[i][a] = 343.f; 
 			}
 			else
