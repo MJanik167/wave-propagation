@@ -7,7 +7,10 @@
 #include <algorithm>
 
 #include "shaderLoader.h" //narzŕdzie do │adowania i kompilowania shaderˇw z pliku
-
+#include <GLFW/glfw3.h>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 //funkcje algebry liniowej
 #include "glm/vec3.hpp" // glm::vec3
@@ -15,6 +18,7 @@
 #include "glm/mat4x4.hpp" // glm::mat4
 #include "glm/gtc/matrix_transform.hpp" // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <iostream>
+
 
 const float pi = 3.14159265358979323846f;
 
@@ -29,8 +33,7 @@ int zcenter = nz-350;
 float vmax = 1000;
 float dtr = ds / (2. * vmax);
 
-
-float tablica[nx][nz] = {};
+float tablica[nx * nz] = {};
 
 void init() {
 	for (int i = 0; i < nx; i++)
@@ -38,18 +41,16 @@ void init() {
 		for (int j = 0; j < nz; j++)
 		{
 			int a = nz - 1 - j; //odwracamy oś Y, żeby było zgodne z OpenGL
-			if (((i >= 90 && a >=290) && (i < 360 && a < 410) )|| ((i >= 240 && a >=190) && (i < 510 && a < 310))) {
-				tablica[i][a] = 343.f; 
+			if (((i >= 90 && a >= 290) && (i < 360 && a < 410)) || ((i >= 240 && a >= 190) && (i < 510 && a < 310))) {
+				tablica[i * nz + a] = 343.f;
 			}
 			else
 			{
-				tablica[i][a] = 1000.f;
+				tablica[i * nz + a] = 1000.f;
 			}
 		}
 	}
-
 }
-
 
 
 //Wymiary okna
@@ -64,36 +65,22 @@ int mbutton; // wcisiety klawisz myszy
 //shaders
 GLuint programID = 0;
 
-float p[nx][nz] = {};
-float p_future[nx][nz] = {};
-float p_past[nx][nz] = {};
+float p[nx * nz] = {};
+float p_future[nx * nz] = {};
+float p_past[nx * nz] = {};
+
 unsigned int ebo, ebo2;
 
 
 /*###############################################################*/ 
 void mysz(int button, int state, int x, int y)
 {
-	mbutton = button;
-	switch (state)
-	{
-	case GLUT_UP:
-		break;
-	case GLUT_DOWN:
-		break;
 
-	}
 }
 /*******************************************/
 void mysz_ruch(int x, int y)
 {
-	if (mbutton == GLUT_LEFT_BUTTON)
-	{
 
-	}
-	if (mbutton == GLUT_RIGHT_BUTTON)
-	{
-	
-	}
 
 }
 /******************************************/
@@ -122,7 +109,7 @@ void klawisz(GLubyte key, int x, int y)
 	
 }
 /*###############################################################*/
-void rysuj(void)
+void rysuj()
 {
 
 	//GLfloat color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
@@ -143,44 +130,22 @@ void rysuj(void)
 	{
 		for (int j = 0; j < nz; j++)
 		{
-			float xo = float(float(i) * sizex)-1.;
-			float yo = float(float(j) * sizez)-1.;
-			float z = p[i][j];
+			float xo = float(float(i) * sizex) - 1.;
+			float yo = float(float(j) * sizez) - 1.;
+			float z = p[i * nz + j];
 			glBegin(GL_QUADS);
-			glVertex3f(xo, yo, z );
-			glVertex3f(xo , yo + sizez , z);
-			glVertex3f(xo + sizex , yo + sizez , z);
-			glVertex3f(xo + sizex , yo, z);
+			glVertex3f(xo, yo, z);
+			glVertex3f(xo, yo + sizez, z);
+			glVertex3f(xo + sizex, yo + sizez, z);
+			glVertex3f(xo + sizex, yo, z);
 			glEnd();
 		}
 	}
-	
-
-
-	glutSwapBuffers();
 
 	glFlush();
-	//glUseProgram(programID); //u┐yj programu, czyli naszego shadera	
-
-
-	//GLuint MVP_id = glGetUniformLocation(programID, "MVP"); // pobierz lokalizację zmiennej 'uniform' "MV" w programie
-	//glUniformMatrix4fv(MVP_id, 1, GL_FALSE, &(MVP[0][0]));	   // wyślij tablicę mv do lokalizacji "MV", która jest typu mat4	
-
-	/*
-	glVertexAttrib2f(2, screen_width,screen_height);
-	glVertexAttrib3f(1, 0.5f, 0.5f, 0.5f);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glBindVertexArray(VAO[0]);
-	glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, 0);
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glVertexAttrib3f(1, 0.0f, 0.0f, 1.0f);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	
-	*/	
 }
 /*###############################################################*/
-void rozmiar(int width, int height)
+void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	screen_width = width;
 	screen_height = height;
@@ -188,14 +153,12 @@ void rozmiar(int width, int height)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, screen_width, screen_height);
 
-	glutPostRedisplay(); // Przerysowanie sceny
 }
 
 /*###############################################################*/
 void idle()
 {
 
-	glutPostRedisplay();
 }
 
 /*###############################################################*/
@@ -207,84 +170,187 @@ long int t = 0; //licznik czasu
 float max = 0.;
 float min = 0.;
 
-void timer(int value) {
-	for (int i = 1;i <(nz - 1);i++) {
-		for (int j =1;j<(nx - 1);j++)
-		{	
+bool show_demo_window = true;
+bool show_another_window = false;
+
+
+double currentTime = 0;
+double lastTime = 0;
+int i = 0;
+
+
+void timer() {
+
+	for (int i = 1; i < (nz - 1); i++) {
+		for (int j = 1; j < (nx - 1); j++)
+		{
 			int a = nz - 1 - j;
-			p_past[i][j] = 2.0 * p[i][j] - p_future[i][j] + ((dtr * dtr) / (ds * ds)) * tablica[i][j] * tablica[i][j] * (p[i][j+1] + p[i][j-1] + p[i+1][j] + p[i - 1][ j] - 4.0 * p[i][j]);
+			p_past[i * nz + j] = 2.0 * p[i * nz + j] - p_future[i * nz + j] +
+				((dtr * dtr) / (ds * ds)) * tablica[i * nz + j] * tablica[i * nz + j] *
+				(p[i * nz + (j + 1)] + p[i * nz + (j - 1)] + p[(i + 1) * nz + j] + p[(i - 1) * nz + j] - 4.0 * p[i * nz + j]);
 		}
 	}
 
-
-	float tf = t*dtr;
+	float tf = t * dtr;
 	float exp_result = expf(-(((pi * fpeak * (tf - (1.0f / fpeak))) * (pi * fpeak * (tf - (1.0f / fpeak))))));
-	p_past[xcenter][zcenter] = p_past[xcenter][zcenter] + exp_result * (1.0 - 2.0 * ((pi * fpeak * (tf - (1.0 / fpeak))) * (pi * fpeak * (tf - (1.0 / fpeak)))));
+	p_past[xcenter * nz + zcenter] = p_past[xcenter * nz + zcenter] + exp_result * (1.0 - 2.0 * ((pi * fpeak * (tf - (1.0 / fpeak))) * (pi * fpeak * (tf - (1.0 / fpeak)))));
 
+	GLuint MVP_id = glGetUniformLocation(programID, "iTime");
+	glUniform1f(MVP_id, float(t));
 
-	GLuint MVP_id = glGetUniformLocation(programID, "iTime"); // pobierz lokalizację zmiennej 'uniform' "MV" w programie
-
-	glUniform1f(MVP_id,float(t));
-
-	for (int i = 0; i < nz;i++)
+	for (int i = 0; i < nz; i++)
 	{
-		p_past[i][0] = p[i][0] + p[i][1] - p_future[i][1] + tablica[i][0] * (dtr / ds) * (p[i][1] - p[i][0] - (p_future[i][2] - p_future[i][1]));
-		p_past[i][nz-1] = p[i][nz-1] + p[i][nz - 2] - p_future[i][nz - 2] + tablica[i][nz-1] * (dtr / ds) * (p[i][nz - 2] - p[i][nz-1] - (p_future[i][nz - 3] - p_future[i][ nz - 2]));
-		p_past[0][i] = p[0][i] + p[1][i] - p_future[1][i] + tablica[0][i] * (dtr / ds) * (p[1][i] - p[0][i] - (p_future[2][i] - p_future[1][i]));
-		p_past[nz - 1][i] = p[nx - 1][i] + p[nx - 2][i] - p_future[nx - 2][i] + tablica[nx - 1][i] * (dtr / ds) * (p[nx - 2][i] - p[nx - 1][i] - (p_future[nx - 3][i] - p_future[nx - 2][i]));
+		p_past[i * nz + 0] = p[i * nz + 0] + p[i * nz + 1] - p_future[i * nz + 1] + tablica[i * nz + 0] * (dtr / ds) * (p[i * nz + 1] - p[i * nz + 0] - (p_future[i * nz + 2] - p_future[i * nz + 1]));
+		p_past[i * nz + (nz - 1)] = p[i * nz + (nz - 1)] + p[i * nz + (nz - 2)] - p_future[i * nz + (nz - 2)] + tablica[i * nz + (nz - 1)] * (dtr / ds) * (p[i * nz + (nz - 2)] - p[i * nz + (nz - 1)] - (p_future[i * nz + (nz - 3)] - p_future[i * nz + (nz - 2)]));
+		p_past[0 * nz + i] = p[0 * nz + i] + p[1 * nz + i] - p_future[1 * nz + i] + tablica[0 * nz + i] * (dtr / ds) * (p[1 * nz + i] - p[0 * nz + i] - (p_future[2 * nz + i] - p_future[1 * nz + i]));
+		p_past[(nx - 1) * nz + i] = p[(nx - 1) * nz + i] + p[(nx - 2) * nz + i] - p_future[(nx - 2) * nz + i] + tablica[(nx - 1) * nz + i] * (dtr / ds) * (p[(nx - 2) * nz + i] - p[(nx - 1) * nz + i] - (p_future[(nx - 3) * nz + i] - p_future[(nx - 2) * nz + i]));
 	}
-	
 
 	t += 1;
-	std::copy(&p[0][0], &p[0][0]+nz*nx, &p_future[0][0]);
-	std::copy(&p_past[0][0], &p_past[0][0] + nz * nx, &p[0][0]);
-	//std::copy(&myint[0][0], &myint[0][0] + rows * columns, &favint[0][0]);
-	glutTimerFunc(.12, timer, 0);
-    
+	std::copy(&p[0], &p[0] + nz * nx, &p_future[0]);
+	std::copy(&p_past[0], &p_past[0] + nz * nx, &p[0]);
+
 }
+
 /*###############################################################*/
+static void glfw_error_callback(int error, const char* description)
+{
+	fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
 int main(int argc, char **argv)
 {
 	init();
 
 
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGB | GLUT_DEPTH);
-	glutInitWindowSize(screen_width, screen_height);
-	glutInitWindowPosition(0, 0);
-	glutCreateWindow("Przyklad 5");
+	glfwSetErrorCallback(glfw_error_callback);
+	if (!glfwInit())
+		return 1;
+
+	const char* glsl_version = "#version 330";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+	//glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
+	GLFWwindow* window = glfwCreateWindow(screen_width, screen_height, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+	if (window == nullptr)
+		return 1;
+	glfwMakeContextCurrent(window);
+	glfwSwapInterval(0); // Enable vsync
+	glfwSetWindowSizeCallback(window, window_size_callback);
+
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+	//ImGui::StyleColorsDark();
+	//ImGui::StyleColorsLight();
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
 
 	glewInit(); //init rozszerzeszeń OpenGL z biblioteki GLEW
 
-	glutDisplayFunc(rysuj);			// def. funkcji rysuj¦cej
-    glutIdleFunc(idle);			// def. funkcji rysuj¦cej w czasie wolnym procesoora (w efekcie: ci¦gle wykonywanej)
-	glutTimerFunc(20, timer, 0);
-	glutReshapeFunc(rozmiar); // def. obs-ugi zdarzenia resize (GLUT)
-									
-	glutKeyboardFunc(klawisz);		// def. obsługi klawiatury
-	glutMouseFunc(mysz); 		// def. obsługi zdarzenia przycisku myszy (GLUT)
-	glutMotionFunc(mysz_ruch); // def. obsługi zdarzenia ruchu myszy (GLUT)
-
-
 	glEnable(GL_DEPTH_TEST);
-
-
-	
-	/*
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBindVertexArray(VAO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo2);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	*/
 
 	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
 
 	glUseProgram(programID); //u┐yj programu, czyli naszego shadera
 
-	glutMainLoop();					
+
+
+	// Our state
+	bool show_demo_window = true;
+	bool show_another_window = false;
+	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+
+	while (!glfwWindowShouldClose(window))
+	{
+
+
+
+		timer(); // Update the simulation state
+		rysuj(); // Render the scene
+		
+		
+		
+		// Poll and handle events (inputs, window resize, etc.)
+		// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+		// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+		// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+		// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+		glfwPollEvents();
+		if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+		{
+			ImGui_ImplGlfw_Sleep(10);
+			continue;
+		}
+
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Checkbox("Another Window", &show_another_window);
+
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+			ImGui::End();
+		}
+
+		// 3. Show another simple window.
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+			ImGui::Text("Hello from another window!");
+			if (ImGui::Button("Close Me"))
+				show_another_window = false;
+			ImGui::End();
+		}
+
+		// Rendering
+		ImGui::Render();
+		int display_w, display_h;
+		glfwGetFramebufferSize(window, &display_w, &display_h);
+		glViewport(0, 0, display_w, display_h);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		glfwSwapBuffers(window);
+	}
+
+	// Cleanup
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
+
+
+	//glutMainLoop();					
 	
 
 	return(0);

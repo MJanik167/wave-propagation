@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="shadersLoader.cpp" />
+    <ClCompile Include="src\imGui\imgui.cpp" />
+    <ClCompile Include="src\imGui\imgui_demo.cpp" />
+    <ClCompile Include="src\imGui\imgui_draw.cpp" />
+    <ClCompile Include="src\imGui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\imGui\imgui_tables.cpp" />
+    <ClCompile Include="src\imGui\imgui_widgets.cpp" />
+    <ClCompile Include="src\imGui\imgui_impl_opengl3.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GL\glew.h" />
+    <ClInclude Include="shaderLoader.h" />
+    <ClInclude Include="src\imGui\imconfig.h" />
+    <ClInclude Include="src\imGui\imgui.h" />
+    <ClInclude Include="src\imGui\imgui_impl_glfw.h" />
+    <ClInclude Include="src\imGui\imgui_internal.h" />
+    <ClInclude Include="src\imGui\imstb_rectpack.h" />
+    <ClInclude Include="src\imGui\imstb_textedit.h" />
+    <ClInclude Include="src\imGui\imstb_truetype.h" />
+    <ClInclude Include="src\imGui\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\imGui\imgui_impl_opengl3_loader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="fragment_shader.glsl" />
+    <None Include="vertex_shader.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{f57dde5d-56de-4bda-b18e-ab33bbe6245f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\imGui">
+      <UniqueIdentifier>{3aca4153-3a1b-48cb-9bea-f5ed6d62e4d7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
