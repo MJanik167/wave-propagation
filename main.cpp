@@ -34,6 +34,9 @@ float vmax = 1000;
 float dtr = ds / (2. * vmax);
 
 float tablica[nx * nz] = {};
+float pozycje[nx * nz * 8] = {};
+
+
 
 void init() {
 	for (int i = 0; i < nx; i++)
@@ -50,6 +53,32 @@ void init() {
 			}
 		}
 	}
+
+
+	int idx = 0;
+	
+	for (int i = 0; i < nx; i++)
+	{
+		for (int j = 0; j < nz; j++)
+		{
+			float sizex = 2. / nx;
+			float sizez = 2. / nz;
+			float xo = float(float(i) * sizex) - 1.;
+			float yo = float(float(j) * sizez) - 1.;
+			/*
+			glVertex3f(xo, yo, z);
+			glVertex3f(xo, yo + sizez, z);
+			glVertex3f(xo + sizex, yo + sizez, z);
+			glVertex3f(xo + sizex, yo, z);
+			*/
+			pozycje[idx++] = xo;			pozycje[idx++] = yo;
+			pozycje[idx++] = xo;			pozycje[idx++] = yo + sizez; 
+			pozycje[idx++] = xo + sizex;	pozycje[idx++] = yo + sizez; //v
+			pozycje[idx++] = xo + sizex;	pozycje[idx++] = yo;
+		}
+	}
+
+	
 }
 
 
@@ -64,12 +93,12 @@ int mbutton; // wcisiety klawisz myszy
 
 //shaders
 GLuint programID = 0;
+GLuint computeShader = 0;
 
 float p[nx * nz] = {};
 float p_future[nx * nz] = {};
 float p_past[nx * nz] = {};
 
-unsigned int ebo, ebo2;
 
 
 /*###############################################################*/ 
@@ -126,6 +155,7 @@ void rysuj()
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Kasowanie ekranu
 	
+	int stride = 0;
 	for (int i = 0; i < nx; i++)
 	{
 		for (int j = 0; j < nz; j++)
@@ -133,12 +163,17 @@ void rysuj()
 			float xo = float(float(i) * sizex) - 1.;
 			float yo = float(float(j) * sizez) - 1.;
 			float z = p[i * nz + j];
+			
 			glBegin(GL_QUADS);
 			glVertex3f(xo, yo, z);
 			glVertex3f(xo, yo + sizez, z);
 			glVertex3f(xo + sizex, yo + sizez, z);
 			glVertex3f(xo + sizex, yo, z);
 			glEnd();
+			
+			//glVertexAttrib1f(1, z);
+			//glDrawArrays(GL_QUADS, stride, 8);
+			//stride += 8;
 		}
 	}
 
@@ -218,14 +253,19 @@ static void glfw_error_callback(int error, const char* description)
 	fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+
+
+GLuint vao;
+GLuint vbo;
+
 int main(int argc, char **argv)
 {
-	init();
 
 
 	glfwSetErrorCallback(glfw_error_callback);
 	if (!glfwInit())
 		return 1;
+
 
 	const char* glsl_version = "#version 330";
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -236,6 +276,7 @@ int main(int argc, char **argv)
 	if (window == nullptr)
 		return 1;
 	glfwMakeContextCurrent(window);
+	glewInit(); //init rozszerzeszeń OpenGL z biblioteki GLEW
 	glfwSwapInterval(0); // Enable vsync
 	glfwSetWindowSizeCallback(window, window_size_callback);
 
@@ -254,14 +295,10 @@ int main(int argc, char **argv)
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-	glewInit(); //init rozszerzeszeń OpenGL z biblioteki GLEW
 
 	glEnable(GL_DEPTH_TEST);
 
-	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
-
-	glUseProgram(programID); //u┐yj programu, czyli naszego shadera
-
+	init();
 
 
 	// Our state
@@ -269,6 +306,28 @@ int main(int argc, char **argv)
 	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pozycje), pozycje, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)0);
+
+	const char* computeShaderSource = shaderLoadSource("compute_shader.glsl");
+	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
+	//glShaderSource(computeShader, 1, &computeShaderSource, NULL);
+	//glCompileShader(computeShader);
+	
+	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+
+	//glAttachShader(programID, computeShader); //przypisz shader do programu
+	//glLinkProgram(programID); //połącz program z shaderem
+
+	glUseProgram(programID); //u┐yj programu, czyli naszego shadera
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -302,20 +361,7 @@ int main(int argc, char **argv)
 			static float f = 0.0f;
 			static int counter = 0;
 
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
+			ImGui::Begin("fps");                          // Create a window called "Hello, world!" and append into it.`
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 			ImGui::End();
 		}
@@ -345,9 +391,13 @@ int main(int argc, char **argv)
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
+
+
 	glfwDestroyWindow(window);
 	glfwTerminate();
-
+	
+	glDeleteBuffers(1, &vbo);
+	glDeleteVertexArrays(1, &vao);
 
 
 	//glutMainLoop();					

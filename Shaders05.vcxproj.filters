@@ -27,6 +27,7 @@
   <ItemGroup>
     <None Include="fragment_shader.glsl" />
     <None Include="vertex_shader.glsl" />
+    <None Include="compute_shader.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

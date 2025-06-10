@@ -194,9 +194,6 @@ int main(int, char**)
 
         glfwSwapBuffers(window);
     }
-#ifdef __EMSCRIPTEN__
-    EMSCRIPTEN_MAINLOOP_END;
-#endif
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -205,6 +202,8 @@ int main(int, char**)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    
 
     return 0;
 }

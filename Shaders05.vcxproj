@@ -90,6 +90,7 @@
     <ClCompile Include="src\imGui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="compute_shader.glsl" />
     <None Include="fragment_shader.glsl" />
     <None Include="vertex_shader.glsl" />
   </ItemGroup>

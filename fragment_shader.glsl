@@ -77,7 +77,7 @@ void main()
     vec3 normCol = vec3(outcol-minZ)/(maxZ-minZ); 
 
 
-    vec3 color = mix(normCol.x==(0-minZ)/(maxZ-minZ)?vec3(0.7,.32,.16):palette(normCol.x),trench,0.01);
+    vec3 color = mix(mod(normCol.x,2.)==(0-minZ)/(maxZ-minZ)?vec3(0.7,.32,.16):palette(normCol.x),trench,0.01);
 
     //vec3 color = vec3((outcol+17.)*0.01);
     //+(t*0.01)
