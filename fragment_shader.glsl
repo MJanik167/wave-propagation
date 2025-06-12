@@ -17,11 +17,11 @@ vec3 palette(float t){
     //vec3 c = vec3(.0,32.0,64.0);
     //vec3 d = vec3(0.1,.55,.6);
 
-
     vec3 a = vec3(0.4,.32,.16);
     vec3 b = vec3(.5,.1,.2);
     vec3 c = vec3(0.8,32.0,64.0);
     vec3 d = vec3(.35,.55,.6);
+    
     //vec3 a = vec3(.5,.1,.5);
     //vec3 b = vec3(1.,.1,1.);
     //vec3 c = vec3(1.0,0.0,1.0);
@@ -77,7 +77,7 @@ void main()
     vec3 normCol = vec3(outcol-minZ)/(maxZ-minZ); 
 
 
-    vec3 color = mix(mod(normCol.x,2.)==(0-minZ)/(maxZ-minZ)?vec3(0.7,.32,.16):palette(normCol.x),trench,0.01);
+    vec3 color = mix(palette(normCol.x),trench,0.01);
 
     //vec3 color = vec3((outcol+17.)*0.01);
     //+(t*0.01)

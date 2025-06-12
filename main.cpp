@@ -34,7 +34,7 @@ float vmax = 1000;
 float dtr = ds / (2. * vmax);
 
 float tablica[nx * nz] = {};
-float pozycje[nx * nz * 8] = {};
+float pozycje[nx * nz * 2] = {};
 
 
 
@@ -72,9 +72,7 @@ void init() {
 			glVertex3f(xo + sizex, yo, z);
 			*/
 			pozycje[idx++] = xo;			pozycje[idx++] = yo;
-			pozycje[idx++] = xo;			pozycje[idx++] = yo + sizez; 
-			pozycje[idx++] = xo + sizex;	pozycje[idx++] = yo + sizez; //v
-			pozycje[idx++] = xo + sizex;	pozycje[idx++] = yo;
+			
 		}
 	}
 
@@ -94,6 +92,11 @@ int mbutton; // wcisiety klawisz myszy
 //shaders
 GLuint programID = 0;
 GLuint computeShader = 0;
+
+
+GLuint vao;
+GLuint vbo;
+GLuint vbo_pos;
 
 float p[nx * nz] = {};
 float p_future[nx * nz] = {};
@@ -140,7 +143,7 @@ void klawisz(GLubyte key, int x, int y)
 /*###############################################################*/
 void rysuj()
 {
-
+	glPointSize(5.0f); // Ustawienie rozmiaru punktu
 	//GLfloat color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	//glClearBufferfv(GL_COLOR, 0, color);
 	float sizex = 2./nx;
@@ -155,7 +158,8 @@ void rysuj()
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Kasowanie ekranu
 	
-	int stride = 0;
+	int stride = nx*nz*2;
+	/*
 	for (int i = 0; i < nx; i++)
 	{
 		for (int j = 0; j < nz; j++)
@@ -163,20 +167,24 @@ void rysuj()
 			float xo = float(float(i) * sizex) - 1.;
 			float yo = float(float(j) * sizez) - 1.;
 			float z = p[i * nz + j];
-			
 			glBegin(GL_QUADS);
 			glVertex3f(xo, yo, z);
 			glVertex3f(xo, yo + sizez, z);
 			glVertex3f(xo + sizex, yo + sizez, z);
 			glVertex3f(xo + sizex, yo, z);
 			glEnd();
-			
-			//glVertexAttrib1f(1, z);
-			//glDrawArrays(GL_QUADS, stride, 8);
-			//stride += 8;
 		}
 	}
+	*/
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+	
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
 
+
+	
+	glDrawArrays(GL_POINTS, 0, stride);
 	glFlush();
 }
 /*###############################################################*/
@@ -255,8 +263,6 @@ static void glfw_error_callback(int error, const char* description)
 
 
 
-GLuint vao;
-GLuint vbo;
 
 int main(int argc, char **argv)
 {
@@ -314,8 +320,21 @@ int main(int argc, char **argv)
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(pozycje), pozycje, GL_STATIC_DRAW);
 
+	glGenBuffers(1, &vbo_pos);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+
+
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+
+
 
 	const char* computeShaderSource = shaderLoadSource("compute_shader.glsl");
 	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
@@ -397,6 +416,7 @@ int main(int argc, char **argv)
 	glfwTerminate();
 	
 	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &vbo_pos);
 	glDeleteVertexArrays(1, &vao);
 
 
