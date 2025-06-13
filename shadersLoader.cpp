@@ -168,3 +168,34 @@ int loadShaders(const char * vertexShaderPath, const char * fragmentShaderPath)
 	}
 	return g_program;
 }
+
+int loadComputeShader(const char* computeShaderPath) {
+
+	GLint result;
+	/* create program object and attach shaders */
+	GLint g_program = glCreateProgram();
+	shaderAttachFromFile(g_program, GL_COMPUTE_SHADER, computeShaderPath);
+
+	/* link the program and make sure that there were no errors */
+	glLinkProgram(g_program);
+	glGetProgramiv(g_program, GL_LINK_STATUS, &result);
+	if (result == GL_FALSE) {
+		GLint length;
+		char* log;
+
+		/* get the program info log */
+		glGetProgramiv(g_program, GL_INFO_LOG_LENGTH, &length);
+		log = (char*)malloc(length);
+		glGetProgramInfoLog(g_program, length, &result, log);
+
+		/* print an error message and the info log */
+		fprintf(stderr, "sceneInit(): Program linking failed: %s\n", log);
+		free(log);
+
+		/* delete the program */
+		glDeleteProgram(g_program);
+		g_program = 0;
+	}
+
+	return g_program;
+}

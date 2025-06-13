@@ -91,7 +91,7 @@ int mbutton; // wcisiety klawisz myszy
 
 //shaders
 GLuint programID = 0;
-GLuint computeShader = 0;
+GLuint computeProgramId = 0;
 
 
 GLuint vao;
@@ -274,8 +274,8 @@ int main(int argc, char **argv)
 
 
 	const char* glsl_version = "#version 330";
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
 	//glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
 	GLFWwindow* window = glfwCreateWindow(screen_width, screen_height, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
@@ -285,7 +285,6 @@ int main(int argc, char **argv)
 	glewInit(); //init rozszerzeszeń OpenGL z biblioteki GLEW
 	glfwSwapInterval(0); // Enable vsync
 	glfwSetWindowSizeCallback(window, window_size_callback);
-
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -336,27 +335,27 @@ int main(int argc, char **argv)
 
 
 
-	const char* computeShaderSource = shaderLoadSource("compute_shader.glsl");
-	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
 	//glShaderSource(computeShader, 1, &computeShaderSource, NULL);
 	//glCompileShader(computeShader);
 	
 	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+	computeProgramId = loadComputeShader("compute_shader.glsl");
 
-	//glAttachShader(programID, computeShader); //przypisz shader do programu
-	//glLinkProgram(programID); //połącz program z shaderem
-
-	glUseProgram(programID); //u┐yj programu, czyli naszego shadera
 
 	while (!glfwWindowShouldClose(window))
 	{
 
 
+		glUseProgram(programID); //u┐yj programu, czyli naszego shadera
 
 		timer(); // Update the simulation state
 		rysuj(); // Render the scene
 		
-		
+		glUseProgram(computeProgramId); // Use the compute shader program
+		glDispatchCompute((unsigned int)screen_width, (unsigned int)screen_height, 1);
+
+		// make sure writing to image has finished before read
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		
 		// Poll and handle events (inputs, window resize, etc.)
 		// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
