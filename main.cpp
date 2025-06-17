@@ -176,11 +176,12 @@ void rysuj()
 		}
 	}
 	*/
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
-	
+	/*
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+	*/
 	glBindVertexArray(vao);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
 
 
 	
@@ -238,9 +239,7 @@ void timer() {
 	float exp_result = expf(-(((pi * fpeak * (tf - (1.0f / fpeak))) * (pi * fpeak * (tf - (1.0f / fpeak))))));
 	p_past[xcenter * nz + zcenter] = p_past[xcenter * nz + zcenter] + exp_result * (1.0 - 2.0 * ((pi * fpeak * (tf - (1.0 / fpeak))) * (pi * fpeak * (tf - (1.0 / fpeak)))));
 
-	GLuint MVP_id = glGetUniformLocation(programID, "iTime");
-	glUniform1f(MVP_id, float(t));
-
+	
 	for (int i = 0; i < nz; i++)
 	{
 		p_past[i * nz + 0] = p[i * nz + 0] + p[i * nz + 1] - p_future[i * nz + 1] + tablica[i * nz + 0] * (dtr / ds) * (p[i * nz + 1] - p[i * nz + 0] - (p_future[i * nz + 2] - p_future[i * nz + 1]));
@@ -248,6 +247,9 @@ void timer() {
 		p_past[0 * nz + i] = p[0 * nz + i] + p[1 * nz + i] - p_future[1 * nz + i] + tablica[0 * nz + i] * (dtr / ds) * (p[1 * nz + i] - p[0 * nz + i] - (p_future[2 * nz + i] - p_future[1 * nz + i]));
 		p_past[(nx - 1) * nz + i] = p[(nx - 1) * nz + i] + p[(nx - 2) * nz + i] - p_future[(nx - 2) * nz + i] + tablica[(nx - 1) * nz + i] * (dtr / ds) * (p[(nx - 2) * nz + i] - p[(nx - 1) * nz + i] - (p_future[(nx - 3) * nz + i] - p_future[(nx - 2) * nz + i]));
 	}
+	GLuint MVP_id = glGetUniformLocation(programID, "iTime");
+	glUniform1f(MVP_id, float(t));
+
 
 	t += 1;
 	std::copy(&p[0], &p[0] + nz * nx, &p_future[0]);
@@ -320,8 +322,9 @@ int main(int argc, char **argv)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(pozycje), pozycje, GL_STATIC_DRAW);
 
 	glGenBuffers(1, &vbo_pos);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, vbo_pos); // Bind the buffer to a binding point
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
 
 
 	glBindVertexArray(vao);
@@ -348,14 +351,12 @@ int main(int argc, char **argv)
 
 		glUseProgram(programID); //u┐yj programu, czyli naszego shadera
 
-		timer(); // Update the simulation state
+		//timer(); // Update the simulation state
 		rysuj(); // Render the scene
 		
 		glUseProgram(computeProgramId); // Use the compute shader program
-		glDispatchCompute((unsigned int)screen_width, (unsigned int)screen_height, 1);
-
-		// make sure writing to image has finished before read
-		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		glDispatchCompute(nx*nz,1,1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 		
 		// Poll and handle events (inputs, window resize, etc.)
 		// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
