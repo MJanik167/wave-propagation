@@ -97,6 +97,9 @@ GLuint computeProgramId = 0;
 GLuint vao;
 GLuint vbo;
 GLuint vbo_pos;
+GLuint vbo_pos2;
+GLuint vbo_pos3;
+GLuint tablica_vbo;
 
 float p[nx * nz] = {};
 float p_future[nx * nz] = {};
@@ -176,13 +179,11 @@ void rysuj()
 		}
 	}
 	*/
-	/*
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
-	*/
-	glBindVertexArray(vao);
+	
 	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
-
+	//glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+	
+	
 
 	
 	glDrawArrays(GL_POINTS, 0, stride);
@@ -222,6 +223,8 @@ double currentTime = 0;
 double lastTime = 0;
 int i = 0;
 
+
+float fps = 200.0f; //frames per second
 
 void timer() {
 
@@ -326,6 +329,22 @@ int main(int argc, char **argv)
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
 
+	glGenBuffers(1, &vbo_pos2);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, vbo_pos2); // Bind the buffer to a binding point
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos2);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &vbo_pos3);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, vbo_pos3); // Bind the buffer to a binding point
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_pos3);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(p), p, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &tablica_vbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, tablica_vbo); // Bind the buffer to a binding point
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, tablica_vbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(tablica), tablica, GL_STATIC_DRAW);
+
+
 
 	glBindVertexArray(vao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -344,6 +363,9 @@ int main(int argc, char **argv)
 	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
 	computeProgramId = loadComputeShader("compute_shader.glsl");
 
+	glUseProgram(computeProgramId);
+	glUniform1i(glGetUniformLocation(computeProgramId, "nx"), nx);
+	glUniform1i(glGetUniformLocation(computeProgramId, "nz"), nz);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -354,10 +376,37 @@ int main(int argc, char **argv)
 		//timer(); // Update the simulation state
 		rysuj(); // Render the scene
 		
-		glUseProgram(computeProgramId); // Use the compute shader program
-		glDispatchCompute(nx*nz,1,1);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-		
+
+		currentTime = glfwGetTime();
+	
+
+		if (currentTime - lastTime >= 1/fps) {
+
+			GLuint MVP_id = glGetUniformLocation(programID, "iTime");
+			glUniform1f(MVP_id, float(t));
+			t += 1;
+
+			std::cout << "Current time: " << currentTime<<"Last time: "<< lastTime << std::endl;
+			glUseProgram(computeProgramId); // Use the compute shader program
+
+			glUniform1f(glGetUniformLocation(computeProgramId, "iTime"), t);
+
+			glDispatchCompute(nx, nz, 1);
+			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+			glBindBuffer(GL_COPY_READ_BUFFER, vbo_pos);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, vbo_pos2);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(p));
+
+			glBindBuffer(GL_COPY_READ_BUFFER, vbo_pos3);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, vbo_pos);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(p));
+
+			
+			lastTime = currentTime;
+		}
+
+	
 		// Poll and handle events (inputs, window resize, etc.)
 		// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 		// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -393,6 +442,8 @@ int main(int argc, char **argv)
 			if (ImGui::Button("Close Me"))
 				show_another_window = false;
 			ImGui::End();
+
+
 		}
 
 		// Rendering
