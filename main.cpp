@@ -267,7 +267,9 @@ static void glfw_error_callback(int error, const char* description)
 }
 
 
-
+float red[4] = { 0.4,0.5,0.8,0.35 };
+float green[4] = {.32,.1,32.,0.55};
+float blue[4] = {.16,.2,64.,.6};
 
 int main(int argc, char **argv)
 {
@@ -361,6 +363,12 @@ int main(int argc, char **argv)
 	//glCompileShader(computeShader);
 	
 	programID = loadShaders("vertex_shader.glsl", "fragment_shader.glsl");
+
+	glUseProgram(programID);
+	glUniform4f(glGetUniformLocation(programID, "red"), red[0], red[1], red[2], red[3]);
+	glUniform4f(glGetUniformLocation(programID, "green"), green[0], green[1], green[2], green[3]);
+	glUniform4f(glGetUniformLocation(programID, "blue"), blue[0], blue[1], blue[2], blue[3]);
+
 	computeProgramId = loadComputeShader("compute_shader.glsl");
 
 	glUseProgram(computeProgramId);
@@ -386,7 +394,7 @@ int main(int argc, char **argv)
 			glUniform1f(MVP_id, float(t));
 			t += 1;
 
-			std::cout << "Current time: " << currentTime<<"Last time: "<< lastTime << std::endl;
+			//std::cout << "Current time: " << currentTime<<"Last time: "<< lastTime << std::endl;
 			glUseProgram(computeProgramId); // Use the compute shader program
 
 			glUniform1f(glGetUniformLocation(computeProgramId, "iTime"), t);
@@ -431,7 +439,20 @@ int main(int argc, char **argv)
 
 			ImGui::Begin("fps");                          // Create a window called "Hello, world!" and append into it.`
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-			ImGui::SliderFloat("model updates per sec", &fps, 0.0f, 1200.0f);
+			if (ImGui::SliderFloat("model updates per sec", &fps, 0.0f, 2000.0f)) {
+			}
+			ImGui::Text("Color palette is created using the following formula color(t) = a + b * cos[ 2*pi(c*t+d)]\nwhere t is the pressure represented by a pixel\na,b,c,d parameters for each color are represented by the fields below");
+			if (ImGui::InputFloat4(" :red", (float*)&red)) {
+				glUniform4f(glGetUniformLocation(programID, "red"), red[0], red[1], red[2], red[3]);
+			}
+			if (ImGui::InputFloat4(" :green ", (float*)&green)) {
+				glUniform4f(glGetUniformLocation(programID, "green"), green[0], green[1], green[2], green[3]);
+			}
+			if (ImGui::InputFloat4(" :blue", (float*)&blue)) {
+				glUniform4f(glGetUniformLocation(programID, "blue"), blue[0], blue[1], blue[2], blue[3]);
+			}
+
+
 			ImGui::End();
 		}
 

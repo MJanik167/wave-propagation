@@ -9,6 +9,10 @@ vec3 center2=vec3(440./600.,300./600.-1.,0.);
 uniform float iTime;
 uniform vec2 iResolution;
 
+uniform vec4 red;
+uniform vec4 green;
+uniform vec4 blue;
+
 
 vec3 palette(float t){
     
@@ -17,11 +21,18 @@ vec3 palette(float t){
     //vec3 c = vec3(.0,32.0,64.0);
     //vec3 d = vec3(0.1,.55,.6);
 
+    /*
     vec3 a = vec3(0.4,.32,.16);
     vec3 b = vec3(.5,.1,.2);
     vec3 c = vec3(0.8,32.0,64.0);
     vec3 d = vec3(.35,.55,.6);
-    
+    */
+    vec3 a = vec3(red.x,green.x,blue.x);
+    vec3 b = vec3(red.y,green.y,blue.y);
+    vec3 c = vec3(red.z,green.z,blue.z);
+    vec3 d = vec3(red.w,green.w,blue.w);
+
+
     //vec3 a = vec3(.5,.1,.5);
     //vec3 b = vec3(1.,.1,1.);
     //vec3 c = vec3(1.0,0.0,1.0);
