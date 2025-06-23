@@ -81,8 +81,8 @@ void init() {
 
 
 //Wymiary okna
-int screen_width = 640;
-int screen_height = 480;
+int screen_width = 1280;
+int screen_height = 960;
 
 
 int pozycjaMyszyX; // na ekranie
@@ -149,10 +149,10 @@ void rysuj()
 	glPointSize(5.0f); // Ustawienie rozmiaru punktu
 	//GLfloat color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	//glClearBufferfv(GL_COLOR, 0, color);
-	float sizex = 2./nx;
-	float sizez = 2./nz;
-	float dx = sizex*0.1;
-	float dz = sizez*0.1;
+	//float sizex = 2./nx;
+	//float sizez = 2./nz;
+	//float dx = sizex*0.1;
+	//float dz = sizez*0.1;
 	
 	GLuint res_id = glGetUniformLocation(programID, "iResolution");
 	glUniform2f(res_id, screen_width, screen_height);
@@ -162,6 +162,7 @@ void rysuj()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Kasowanie ekranu
 	
 	int stride = nx*nz*2;
+	
 	/*
 	for (int i = 0; i < nx; i++)
 	{
@@ -227,7 +228,7 @@ int i = 0;
 float fps = 200.0f; //frames per second
 
 void timer() {
-
+	//przeniesione na compute shader
 	for (int i = 1; i < (nz - 1); i++) {
 		for (int j = 1; j < (nx - 1); j++)
 		{
@@ -316,7 +317,6 @@ int main(int argc, char **argv)
 	// Our state
 	bool show_demo_window = true;
 	bool show_another_window = false;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 
 	glGenVertexArrays(1, &vao);
@@ -387,7 +387,7 @@ int main(int argc, char **argv)
 
 		currentTime = glfwGetTime();
 	
-
+		//timer
 		if (currentTime - lastTime >= 1/fps) {
 
 			GLuint MVP_id = glGetUniformLocation(programID, "iTime");
@@ -454,18 +454,6 @@ int main(int argc, char **argv)
 
 
 			ImGui::End();
-		}
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-
-
 		}
 
 		// Rendering

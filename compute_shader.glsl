@@ -47,8 +47,8 @@ void main() {
 		float exp_result = exp(-(((pi * fpeak * (tf - (1.0f / fpeak))) * (pi * fpeak * (tf - (1.0f / fpeak))))));
 		p_past[id] = p_past[id] + exp_result * (1.0 - 2.0 * ((pi * fpeak * (tf - (1.0 / fpeak))) * (pi * fpeak * (tf - (1.0 / fpeak)))));
 	}
-	
-//boczne
+
+
 	if(y_id==0){
 		p_past[id] = p[id+0] + p[id+ 1] - p_future[id+ 1] + tablica[id+ 0] * (dtr / ds) * (p[id+ 1] - p[id+ 0] - (p_future[id+ 2] - p_future[id+ 1]));
 	}else if(y_id==nx-1){
