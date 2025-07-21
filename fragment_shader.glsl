@@ -49,7 +49,6 @@ float sdBox( in vec3 p, in vec3 b )
 
 
 float maxZ = 37.6;
-//float minZ = -37.6;
 float minZ = -18.1;
 
 

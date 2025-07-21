@@ -169,6 +169,8 @@ int loadShaders(const char * vertexShaderPath, const char * fragmentShaderPath)
 	return g_program;
 }
 
+
+//zaladowanie compute shadera
 int loadComputeShader(const char* computeShaderPath) {
 
 	GLint result;
